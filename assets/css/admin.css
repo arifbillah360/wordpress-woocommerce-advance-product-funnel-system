@@ -1,0 +1,122 @@
+/**
+ * Admin Styles
+ *
+ * Styles for admin settings and product pages.
+ *
+ * @package Gym_Multi_Participant_Booking
+ * @since 1.0.0
+ */
+
+/* Settings Page */
+.wrap .gmpb-usage-guide {
+	background: #fff;
+	border: 1px solid #ccd0d4;
+	padding: 20px;
+	margin-top: 15px;
+	max-width: 800px;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.gmpb-usage-guide ol {
+	margin-left: 20px;
+}
+
+.gmpb-usage-guide li {
+	margin-bottom: 15px;
+	line-height: 1.6;
+}
+
+.gmpb-usage-guide strong {
+	color: #0073aa;
+}
+
+.gmpb-usage-guide p {
+	margin-top: 20px;
+	padding: 10px;
+	background-color: #fff8e5;
+	border-left: 4px solid #ffb900;
+}
+
+/* Product Settings */
+#gmpb_participants_data .options_group {
+	padding: 12px;
+}
+
+#gmpb_participants_data .form-field {
+	margin-bottom: 15px;
+}
+
+#gmpb_participants_data .form-field label {
+	font-weight: 600;
+}
+
+#gmpb_participants_data .description {
+	color: #666;
+	font-style: italic;
+}
+
+/* Product List Column */
+.column-gmpb_participants {
+	width: 100px;
+	text-align: center;
+}
+
+.column-gmpb_participants .dashicons {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+}
+
+.column-gmpb_participants small {
+	display: inline-block;
+	color: #666;
+	font-size: 11px;
+}
+
+/* Admin Notices */
+.notice.gmpb-notice {
+	padding: 12px 15px;
+	border-left-width: 4px;
+}
+
+.notice.gmpb-notice p {
+	margin: 0.5em 0;
+}
+
+/* Form Fields */
+.form-table th {
+	width: 250px;
+}
+
+.form-table input[type="text"],
+.form-table input[type="email"],
+.form-table input[type="number"] {
+	padding: 6px 10px;
+}
+
+.form-table .description {
+	margin-top: 5px;
+	color: #646970;
+	font-size: 13px;
+}
+
+/* Settings Sections */
+.form-table h2 {
+	margin-top: 30px;
+	padding-top: 20px;
+	border-top: 1px solid #ddd;
+}
+
+/* Responsive */
+@media screen and (max-width: 782px) {
+	.form-table th {
+		width: auto;
+		padding-bottom: 5px;
+	}
+
+	.form-table input[type="text"],
+	.form-table input[type="email"],
+	.form-table input[type="number"] {
+		width: 100%;
+	}
+}
