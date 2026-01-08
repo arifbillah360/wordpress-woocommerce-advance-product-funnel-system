@@ -1,348 +1,628 @@
 /**
- * Frontend JavaScript
+ * Frontend JavaScript for Gym Multi-Participant Booking
  *
- * Handles participant field management on product pages.
+ * Handles dynamic participant field generation and validation on product pages.
+ * ONLY runs on products where participant booking is enabled.
  *
  * @package Gym_Multi_Participant_Booking
  * @since 1.0.0
  */
 
-(function($) {
-	'use strict';
+(function() {
+    'use strict';
 
-	/**
-	 * Participant Manager Object
-	 */
-	var GMPBParticipants = {
-		/**
-		 * Current participant count.
-		 */
-		count: 1,
+    /**
+     * Participant Manager Class
+     *
+     * Manages dynamic participant field generation based on product quantity.
+     */
+    class ParticipantManager {
+        /**
+         * Constructor
+         */
+        constructor() {
+            // Check if participant form exists on page
+            this.formWrapper = document.querySelector('.gmpb-participant-form');
 
-		/**
-		 * Minimum participants required.
-		 */
-		minParticipants: 1,
+            if (!this.formWrapper) {
+                return; // Exit if form not present - product doesn't have booking enabled
+            }
 
-		/**
-		 * Maximum participants allowed.
-		 */
-		maxParticipants: 10,
+            // Get references to key elements
+            this.quantityInput = document.querySelector('input.qty');
+            this.participantsContainer = document.querySelector('.gmpb-participants-container');
+            this.cartForm = document.querySelector('form.cart');
 
-		/**
-		 * Whether names are required.
-		 */
-		requireNames: false,
+            // Ensure required elements exist
+            if (!this.quantityInput || !this.participantsContainer || !this.cartForm) {
+                console.warn('GMPB: Required form elements not found');
+                return;
+            }
 
-		/**
-		 * Wrapper element.
-		 */
-		$wrapper: null,
+            // Get configuration from localized data
+            this.config = {
+                maxParticipants: parseInt(gmpbData?.maxParticipants) || 10,
+                minParticipants: parseInt(gmpbData?.minParticipants) || 1,
+                requirePhone: gmpbData?.requirePhone || false,
+                allowDuplicateEmails: gmpbData?.allowDuplicateEmails || false,
+                labels: gmpbData?.labels || {
+                    name: 'Full Name',
+                    email: 'Email Address',
+                    phone: 'Phone Number'
+                },
+                errors: gmpbData?.errors || {
+                    nameRequired: 'Please enter participant name',
+                    emailRequired: 'Please enter email address',
+                    emailInvalid: 'Please enter a valid email address',
+                    phoneRequired: 'Please enter phone number',
+                    duplicateEmail: 'Each participant must have a unique email address',
+                    minParticipants: 'Minimum participants required',
+                    maxParticipants: 'Maximum participants exceeded'
+                }
+            };
 
-		/**
-		 * Initialize the participant manager.
-		 */
-		init: function() {
-			var self = this;
+            // State management
+            this.currentQuantity = 0;
+            this.debounceTimer = null;
 
-			// Find wrapper.
-			self.$wrapper = $('.gmpb-participant-fields-wrapper');
+            // Initialize
+            this.init();
+        }
 
-			if (self.$wrapper.length === 0) {
-				return;
-			}
+        /**
+         * Initialize the participant manager
+         */
+        init() {
+            console.log('GMPB: Initializing participant manager');
 
-			// Get settings from data attributes.
-			self.minParticipants = parseInt(self.$wrapper.data('min'), 10) || 1;
-			self.maxParticipants = parseInt(self.$wrapper.data('max'), 10) || 10;
-			self.requireNames = self.$wrapper.data('require-names') === 1;
+            // Bind event handlers
+            this.bindEvents();
 
-			// Bind events.
-			self.bindEvents();
+            // Trigger initial field generation based on current quantity
+            const initialQuantity = parseInt(this.quantityInput.value) || this.config.minParticipants;
+            this.updateParticipantFields(initialQuantity);
+        }
 
-			// Initial update.
-			self.updateButtons();
-		},
+        /**
+         * Bind event handlers
+         */
+        bindEvents() {
+            // Listen to quantity changes with debouncing
+            this.quantityInput.addEventListener('change', (e) => {
+                this.handleQuantityChange(e);
+            });
 
-		/**
-		 * Bind event handlers.
-		 */
-		bindEvents: function() {
-			var self = this;
+            this.quantityInput.addEventListener('input', (e) => {
+                this.handleQuantityChangeDebounced(e);
+            });
 
-			// Add participant button.
-			$(document).on('click', '.gmpb-add-btn', function(e) {
-				e.preventDefault();
-				self.addParticipant();
-			});
+            // Form validation before submit
+            this.cartForm.addEventListener('submit', (e) => {
+                if (!this.validateParticipantFields()) {
+                    e.preventDefault();
+                    this.scrollToFirstError();
+                    return false;
+                }
+            });
 
-			// Remove participant button.
-			$(document).on('click', '.gmpb-remove-btn', function(e) {
-				e.preventDefault();
-				var $row = $(this).closest('.gmpb-participant-row');
-				self.removeParticipant($row);
-			});
+            // Real-time email validation on blur
+            this.participantsContainer.addEventListener('blur', (e) => {
+                if (e.target.matches('input[type="email"]')) {
+                    this.validateEmailField(e.target);
+                }
+            }, true);
 
-			// Real-time email validation.
-			$(document).on('blur', '.gmpb-participant-email', function() {
-				self.validateEmail($(this));
-			});
+            // Auto-focus next field on input
+            this.participantsContainer.addEventListener('input', (e) => {
+                if (e.target.matches('input[name^="participant_"]')) {
+                    this.handleAutoFocus(e.target);
+                }
+            });
 
-			// Form validation before submit.
-			$('form.cart').on('submit', function(e) {
-				if (!self.validateForm()) {
-					e.preventDefault();
-					return false;
-				}
-			});
-		},
+            // Remove error styling on input
+            this.participantsContainer.addEventListener('input', (e) => {
+                if (e.target.classList.contains('error')) {
+                    e.target.classList.remove('error');
+                }
+            });
+        }
 
-		/**
-		 * Add a new participant row.
-		 */
-		addParticipant: function() {
-			var self = this;
+        /**
+         * Handle quantity change with debouncing
+         *
+         * @param {Event} e - Input event
+         */
+        handleQuantityChangeDebounced(e) {
+            clearTimeout(this.debounceTimer);
 
-			// Check max limit.
-			if (self.count >= self.maxParticipants) {
-				alert(gmpbData.i18n.maxReached);
-				return;
-			}
+            this.debounceTimer = setTimeout(() => {
+                this.handleQuantityChange(e);
+            }, 300);
+        }
 
-			self.count++;
+        /**
+         * Handle quantity change event
+         *
+         * @param {Event} e - Change event
+         */
+        handleQuantityChange(e) {
+            let quantity = parseInt(e.target.value) || 0;
 
-			// Get template from first row.
-			var $container = $('.gmpb-participants-container');
-			var index = self.count - 1;
-			var requiredAttr = self.requireNames ? 'required' : '';
+            // Enforce minimum
+            if (quantity < this.config.minParticipants) {
+                quantity = this.config.minParticipants;
+                e.target.value = quantity;
+            }
 
-			// Build new row HTML.
-			var html = '<div class="gmpb-participant-row" data-index="' + index + '">' +
-				'<h4 class="gmpb-participant-heading">' +
-				'Participant ' + self.count +
-				'</h4>' +
-				'<div class="gmpb-field-group">' +
-				'<label for="gmpb_participant_name_' + index + '" class="gmpb-label">' +
-				'Name' +
-				(self.requireNames ? ' <span class="required">*</span>' : '') +
-				'</label>' +
-				'<input type="text" class="gmpb-input gmpb-participant-name" ' +
-				'name="gmpb_participants[' + index + '][name]" ' +
-				'id="gmpb_participant_name_' + index + '" ' +
-				'placeholder="Full Name" ' +
-				requiredAttr + '>' +
-				'</div>' +
-				'<div class="gmpb-field-group">' +
-				'<label for="gmpb_participant_email_' + index + '" class="gmpb-label">' +
-				'Email Address <span class="required">*</span>' +
-				'</label>' +
-				'<input type="email" class="gmpb-input gmpb-participant-email" ' +
-				'name="gmpb_participants[' + index + '][email]" ' +
-				'id="gmpb_participant_email_' + index + '" ' +
-				'placeholder="email@example.com" ' +
-				'required>' +
-				'</div>' +
-				'<button type="button" class="button gmpb-remove-btn">' +
-				gmpbData.i18n.removeParticipant +
-				'</button>' +
-				'</div>';
+            // Enforce maximum
+            if (quantity > this.config.maxParticipants) {
+                quantity = this.config.maxParticipants;
+                e.target.value = quantity;
+                this.showGlobalWarning(
+                    `Maximum ${this.config.maxParticipants} participants allowed per booking.`
+                );
+            }
 
-			// Append to container.
-			$container.append(html);
+            // Update fields
+            this.updateParticipantFields(quantity);
+        }
 
-			// Update counter.
-			$('.gmpb-current-count').val(self.count);
+        /**
+         * Update participant fields based on quantity
+         *
+         * @param {number} quantity - Number of participants
+         */
+        updateParticipantFields(quantity) {
+            // Prevent unnecessary updates
+            if (quantity === this.currentQuantity) {
+                return;
+            }
 
-			// Update buttons.
-			self.updateButtons();
+            console.log(`GMPB: Updating fields for ${quantity} participants`);
 
-			// Scroll to new row.
-			$('html, body').animate({
-				scrollTop: $container.find('.gmpb-participant-row:last').offset().top - 100
-			}, 500);
-		},
+            // Store current values before clearing
+            const currentValues = this.getCurrentFieldValues();
 
-		/**
-		 * Remove a participant row.
-		 *
-		 * @param {jQuery} $row Row to remove.
-		 */
-		removeParticipant: function($row) {
-			var self = this;
+            // Clear existing fields
+            this.participantsContainer.innerHTML = '';
 
-			// Check minimum limit.
-			if (self.count <= self.minParticipants) {
-				alert(gmpbData.i18n.minRequired);
-				return;
-			}
+            // Generate new fields
+            for (let i = 1; i <= quantity; i++) {
+                const fieldSet = this.createParticipantFieldSet(i);
+                this.participantsContainer.appendChild(fieldSet);
 
-			// Remove row with animation.
-			$row.fadeOut(300, function() {
-				$(this).remove();
-				self.count--;
+                // Restore previous values if they exist
+                if (currentValues[i]) {
+                    this.restoreFieldValues(i, currentValues[i]);
+                }
+            }
 
-				// Update counter.
-				$('.gmpb-current-count').val(self.count);
+            // Update state
+            this.currentQuantity = quantity;
 
-				// Renumber rows.
-				self.renumberRows();
+            // Animate fields in
+            this.animateFieldsIn();
 
-				// Update buttons.
-				self.updateButtons();
-			});
-		},
+            // Announce change to screen readers
+            this.announceToScreenReader(`${quantity} participant ${quantity === 1 ? 'field' : 'fields'} displayed`);
+        }
 
-		/**
-		 * Renumber participant rows.
-		 */
-		renumberRows: function() {
-			$('.gmpb-participant-row').each(function(index) {
-				var $row = $(this);
-				var newIndex = index;
+        /**
+         * Get current field values before clearing
+         *
+         * @return {Object} Current field values indexed by participant number
+         */
+        getCurrentFieldValues() {
+            const values = {};
+            const fields = this.participantsContainer.querySelectorAll('.gmpb-participant-field');
 
-				// Update heading.
-				$row.find('.gmpb-participant-heading').text(
-					'Participant ' + (index + 1)
-				);
+            fields.forEach((fieldSet) => {
+                const index = parseInt(fieldSet.dataset.participantIndex);
+                const nameInput = fieldSet.querySelector(`input[name="participant_name_${index}"]`);
+                const emailInput = fieldSet.querySelector(`input[name="participant_email_${index}"]`);
+                const phoneInput = fieldSet.querySelector(`input[name="participant_phone_${index}"]`);
 
-				// Update data attribute.
-				$row.attr('data-index', newIndex);
+                values[index] = {
+                    name: nameInput?.value || '',
+                    email: emailInput?.value || '',
+                    phone: phoneInput?.value || ''
+                };
+            });
 
-				// Update field names and IDs.
-				$row.find('input').each(function() {
-					var $input = $(this);
-					var name = $input.attr('name');
-					var id = $input.attr('id');
+            return values;
+        }
 
-					if (name) {
-						name = name.replace(/\[\d+\]/, '[' + newIndex + ']');
-						$input.attr('name', name);
-					}
+        /**
+         * Restore field values after regeneration
+         *
+         * @param {number} index - Participant index
+         * @param {Object} values - Field values to restore
+         */
+        restoreFieldValues(index, values) {
+            const nameInput = document.querySelector(`input[name="participant_name_${index}"]`);
+            const emailInput = document.querySelector(`input[name="participant_email_${index}"]`);
+            const phoneInput = document.querySelector(`input[name="participant_phone_${index}"]`);
 
-					if (id) {
-						id = id.replace(/_\d+$/, '_' + newIndex);
-						$input.attr('id', id);
-						$input.prev('label').attr('for', id);
-					}
-				});
-			});
-		},
+            if (nameInput) nameInput.value = values.name;
+            if (emailInput) emailInput.value = values.email;
+            if (phoneInput) phoneInput.value = values.phone;
+        }
 
-		/**
-		 * Update button states.
-		 */
-		updateButtons: function() {
-			var self = this;
+        /**
+         * Create participant field set HTML
+         *
+         * @param {number} index - Participant number (1-based)
+         * @return {HTMLElement} Field set element
+         */
+        createParticipantFieldSet(index) {
+            const fieldSet = document.createElement('div');
+            fieldSet.className = 'gmpb-participant-field';
+            fieldSet.dataset.participantIndex = index;
+            fieldSet.setAttribute('role', 'group');
+            fieldSet.setAttribute('aria-labelledby', `participant-heading-${index}`);
 
-			// Update add button.
-			var $addBtn = $('.gmpb-add-btn');
-			if (self.count >= self.maxParticipants) {
-				$addBtn.prop('disabled', true);
-			} else {
-				$addBtn.prop('disabled', false);
-			}
+            // Build HTML structure
+            fieldSet.innerHTML = `
+                <div class="gmpb-participant-field__header">
+                    <span class="gmpb-participant-field__number" id="participant-heading-${index}">
+                        Participant ${index}
+                    </span>
+                </div>
+                <div class="gmpb-participant-field__group">
+                    <div class="gmpb-field">
+                        <label for="participant_name_${index}">
+                            ${this.config.labels.name} <span class="required" aria-label="required">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="participant_name_${index}"
+                            name="participant_name_${index}"
+                            class="gmpb-input"
+                            required
+                            placeholder="Enter full name"
+                            autocomplete="name"
+                            aria-required="true"
+                            aria-describedby="participant-name-desc-${index}">
+                        <span class="gmpb-field-description" id="participant-name-desc-${index}" style="display:none;">
+                            Enter the full name of participant ${index}
+                        </span>
+                    </div>
+                    <div class="gmpb-field">
+                        <label for="participant_email_${index}">
+                            ${this.config.labels.email} <span class="required" aria-label="required">*</span>
+                        </label>
+                        <input
+                            type="email"
+                            id="participant_email_${index}"
+                            name="participant_email_${index}"
+                            class="gmpb-input"
+                            required
+                            placeholder="Enter email address"
+                            autocomplete="email"
+                            aria-required="true"
+                            aria-describedby="participant-email-desc-${index}">
+                        <span class="gmpb-field-description" id="participant-email-desc-${index}" style="display:none;">
+                            Enter a valid email address for participant ${index}
+                        </span>
+                    </div>
+                    ${this.config.requirePhone ? `
+                    <div class="gmpb-field">
+                        <label for="participant_phone_${index}">
+                            ${this.config.labels.phone} <span class="required" aria-label="required">*</span>
+                        </label>
+                        <input
+                            type="tel"
+                            id="participant_phone_${index}"
+                            name="participant_phone_${index}"
+                            class="gmpb-input"
+                            required
+                            placeholder="Enter phone number"
+                            autocomplete="tel"
+                            aria-required="true"
+                            aria-describedby="participant-phone-desc-${index}">
+                        <span class="gmpb-field-description" id="participant-phone-desc-${index}" style="display:none;">
+                            Enter a phone number for participant ${index}
+                        </span>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="gmpb-participant-field__errors" role="alert" aria-live="polite"></div>
+            `;
 
-			// Update remove buttons.
-			var $removeButtons = $('.gmpb-remove-btn');
-			if (self.count <= self.minParticipants) {
-				$removeButtons.prop('disabled', true);
-			} else {
-				$removeButtons.prop('disabled', false);
-			}
-		},
+            return fieldSet;
+        }
 
-		/**
-		 * Validate email field.
-		 *
-		 * @param {jQuery} $input Email input field.
-		 */
-		validateEmail: function($input) {
-			var email = $input.val().trim();
+        /**
+         * Animate fields in with staggered effect
+         */
+        animateFieldsIn() {
+            const fields = this.participantsContainer.querySelectorAll('.gmpb-participant-field');
 
-			if (email === '') {
-				$input.removeClass('error');
-				return true;
-			}
+            fields.forEach((field, index) => {
+                // Set initial state
+                field.style.opacity = '0';
+                field.style.transform = 'translateY(20px)';
 
-			var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                // Animate in with delay
+                setTimeout(() => {
+                    field.style.transition = 'all 0.3s ease';
+                    field.style.opacity = '1';
+                    field.style.transform = 'translateY(0)';
+                }, index * 50);
+            });
+        }
 
-			if (!emailRegex.test(email)) {
-				$input.addClass('error');
-				return false;
-			} else {
-				$input.removeClass('error');
-				return true;
-			}
-		},
+        /**
+         * Validate all participant fields before form submission
+         *
+         * @return {boolean} Whether all fields are valid
+         */
+        validateParticipantFields() {
+            const fields = this.participantsContainer.querySelectorAll('.gmpb-participant-field');
+            let isValid = true;
+            const emails = [];
 
-		/**
-		 * Validate entire form.
-		 *
-		 * @return {boolean} Whether form is valid.
-		 */
-		validateForm: function() {
-			var self = this;
-			var isValid = true;
-			var validCount = 0;
+            // Clear all previous errors
+            this.clearAllErrors();
 
-			// Validate each participant.
-			$('.gmpb-participant-row').each(function() {
-				var $row = $(this);
-				var $name = $row.find('.gmpb-participant-name');
-				var $email = $row.find('.gmpb-participant-email');
+            // Validate each participant
+            fields.forEach((fieldSet) => {
+                const index = fieldSet.dataset.participantIndex;
+                const nameInput = fieldSet.querySelector(`input[name="participant_name_${index}"]`);
+                const emailInput = fieldSet.querySelector(`input[name="participant_email_${index}"]`);
+                const phoneInput = fieldSet.querySelector(`input[name="participant_phone_${index}"]`);
 
-				var name = $name.val().trim();
-				var email = $email.val().trim();
+                // Validate name
+                if (!nameInput.value.trim()) {
+                    this.showFieldError(fieldSet, nameInput, this.config.errors.nameRequired);
+                    isValid = false;
+                }
 
-				// Check if email is provided.
-				if (email === '') {
-					return; // Skip this row.
-				}
+                // Validate email
+                if (!emailInput.value.trim()) {
+                    this.showFieldError(fieldSet, emailInput, this.config.errors.emailRequired);
+                    isValid = false;
+                } else if (!this.isValidEmail(emailInput.value)) {
+                    this.showFieldError(fieldSet, emailInput, this.config.errors.emailInvalid);
+                    isValid = false;
+                } else {
+                    // Collect emails for duplicate check
+                    emails.push(emailInput.value.trim().toLowerCase());
+                }
 
-				// Validate email format.
-				if (!self.validateEmail($email)) {
-					isValid = false;
-					alert(gmpbData.i18n.invalidEmail);
-					$email.focus();
-					return false; // Break loop.
-				}
+                // Validate phone (if required)
+                if (this.config.requirePhone && phoneInput && !phoneInput.value.trim()) {
+                    this.showFieldError(fieldSet, phoneInput, this.config.errors.phoneRequired);
+                    isValid = false;
+                }
+            });
 
-				// Check if name is required.
-				if (self.requireNames && name === '') {
-					isValid = false;
-					alert(gmpbData.i18n.nameRequired);
-					$name.focus();
-					return false; // Break loop.
-				}
+            // Check for duplicate emails (if not allowed)
+            if (!this.config.allowDuplicateEmails && this.hasDuplicates(emails)) {
+                this.showGlobalError(this.config.errors.duplicateEmail);
+                isValid = false;
+            }
 
-				validCount++;
-			});
+            return isValid;
+        }
 
-			if (!isValid) {
-				return false;
-			}
+        /**
+         * Validate individual email field
+         *
+         * @param {HTMLElement} emailInput - Email input element
+         * @return {boolean} Whether email is valid
+         */
+        validateEmailField(emailInput) {
+            const value = emailInput.value.trim();
 
-			// Check minimum participants.
-			if (validCount < self.minParticipants) {
-				alert(gmpbData.i18n.minRequired);
-				return false;
-			}
+            if (!value) {
+                emailInput.classList.remove('error');
+                return true;
+            }
 
-			// Check maximum participants.
-			if (validCount > self.maxParticipants) {
-				alert(gmpbData.i18n.maxReached);
-				return false;
-			}
+            if (!this.isValidEmail(value)) {
+                emailInput.classList.add('error');
+                return false;
+            } else {
+                emailInput.classList.remove('error');
+                return true;
+            }
+        }
 
-			return true;
-		}
-	};
+        /**
+         * Check if email format is valid
+         *
+         * @param {string} email - Email address to validate
+         * @return {boolean} Whether email is valid
+         */
+        isValidEmail(email) {
+            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return regex.test(email.trim());
+        }
 
-	/**
-	 * Initialize when document is ready.
-	 */
-	$(document).ready(function() {
-		GMPBParticipants.init();
-	});
+        /**
+         * Check if array has duplicate values
+         *
+         * @param {Array} arr - Array to check
+         * @return {boolean} Whether duplicates exist
+         */
+        hasDuplicates(arr) {
+            return new Set(arr).size !== arr.length;
+        }
 
-})(jQuery);
+        /**
+         * Show field-specific error
+         *
+         * @param {HTMLElement} fieldSet - Parent field set
+         * @param {HTMLElement} input - Input element
+         * @param {string} message - Error message
+         */
+        showFieldError(fieldSet, input, message) {
+            // Add error class to input
+            input.classList.add('error');
+            input.setAttribute('aria-invalid', 'true');
+
+            // Create error message element
+            const errorDiv = fieldSet.querySelector('.gmpb-participant-field__errors');
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'gmpb-error-message';
+            errorMessage.textContent = message;
+            errorMessage.setAttribute('role', 'alert');
+
+            errorDiv.appendChild(errorMessage);
+
+            // Focus the input
+            input.focus();
+        }
+
+        /**
+         * Show global error message
+         *
+         * @param {string} message - Error message
+         */
+        showGlobalError(message) {
+            const existingError = this.formWrapper.querySelector('.gmpb-global-error');
+
+            if (existingError) {
+                existingError.remove();
+            }
+
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'gmpb-global-error';
+            errorDiv.setAttribute('role', 'alert');
+            errorDiv.textContent = message;
+
+            this.participantsContainer.insertAdjacentElement('beforebegin', errorDiv);
+        }
+
+        /**
+         * Show global warning message
+         *
+         * @param {string} message - Warning message
+         */
+        showGlobalWarning(message) {
+            const existingWarning = this.formWrapper.querySelector('.gmpb-global-warning');
+
+            if (existingWarning) {
+                existingWarning.remove();
+            }
+
+            const warningDiv = document.createElement('div');
+            warningDiv.className = 'gmpb-global-warning';
+            warningDiv.setAttribute('role', 'status');
+            warningDiv.textContent = message;
+
+            this.participantsContainer.insertAdjacentElement('beforebegin', warningDiv);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                warningDiv.remove();
+            }, 5000);
+        }
+
+        /**
+         * Clear all error messages and states
+         */
+        clearAllErrors() {
+            // Clear field errors
+            const errorDivs = this.participantsContainer.querySelectorAll('.gmpb-participant-field__errors');
+            errorDivs.forEach(div => {
+                div.innerHTML = '';
+            });
+
+            // Remove error classes
+            const errorInputs = this.participantsContainer.querySelectorAll('input.error');
+            errorInputs.forEach(input => {
+                input.classList.remove('error');
+                input.removeAttribute('aria-invalid');
+            });
+
+            // Remove global errors
+            const globalError = this.formWrapper.querySelector('.gmpb-global-error');
+            if (globalError) {
+                globalError.remove();
+            }
+        }
+
+        /**
+         * Scroll to first error field
+         */
+        scrollToFirstError() {
+            const firstError = this.participantsContainer.querySelector('input.error');
+
+            if (firstError) {
+                const offset = 100; // Offset from top
+                const elementPosition = firstError.getBoundingClientRect().top + window.pageYOffset;
+                const offsetPosition = elementPosition - offset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+
+                // Focus the field after scroll
+                setTimeout(() => {
+                    firstError.focus();
+                }, 500);
+            }
+        }
+
+        /**
+         * Handle auto-focus to next field
+         *
+         * @param {HTMLElement} currentInput - Current input element
+         */
+        handleAutoFocus(currentInput) {
+            const allInputs = Array.from(
+                this.participantsContainer.querySelectorAll('input[name^="participant_"]')
+            );
+
+            const currentIndex = allInputs.indexOf(currentInput);
+
+            // If field is filled and not the last field
+            if (currentInput.value.trim() && currentIndex < allInputs.length - 1) {
+                const nextInput = allInputs[currentIndex + 1];
+
+                // Only auto-focus if next field is empty
+                if (!nextInput.value.trim()) {
+                    setTimeout(() => {
+                        nextInput.focus();
+                    }, 100);
+                }
+            }
+        }
+
+        /**
+         * Announce message to screen readers
+         *
+         * @param {string} message - Message to announce
+         */
+        announceToScreenReader(message) {
+            let announcer = document.getElementById('gmpb-screen-reader-announcer');
+
+            if (!announcer) {
+                announcer = document.createElement('div');
+                announcer.id = 'gmpb-screen-reader-announcer';
+                announcer.className = 'screen-reader-text';
+                announcer.setAttribute('aria-live', 'polite');
+                announcer.setAttribute('aria-atomic', 'true');
+                announcer.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;';
+                document.body.appendChild(announcer);
+            }
+
+            announcer.textContent = message;
+        }
+    }
+
+    /**
+     * Initialize when DOM is ready
+     */
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            new ParticipantManager();
+        });
+    } else {
+        new ParticipantManager();
+    }
+
+})();
