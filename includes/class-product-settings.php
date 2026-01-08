@@ -534,13 +534,27 @@ class GMPB_Product_Settings {
 	}
 
 	/**
-	 * Get product participant settings.
+	 * Get product participant settings (STATIC).
+	 *
+	 * Returns all participant booking settings for a specific product.
+	 * Can be called statically without instantiating the class.
 	 *
 	 * @since 1.0.0
 	 * @param int $product_id Product ID.
-	 * @return array
+	 * @return array Array of settings: enabled, min, max, require_names, custom_label.
 	 */
-	public function get_product_settings( $product_id ) {
+	public static function get_product_settings( $product_id ) {
+		// Validate product ID.
+		if ( empty( $product_id ) || ! is_numeric( $product_id ) ) {
+			return array(
+				'enabled'       => false,
+				'min'           => 1,
+				'max'           => 10,
+				'require_names' => false,
+				'custom_label'  => '',
+			);
+		}
+
 		return array(
 			'enabled'       => self::is_participant_booking_enabled( $product_id ),
 			'min'           => (int) self::get_product_setting( $product_id, 'min', 1 ),
