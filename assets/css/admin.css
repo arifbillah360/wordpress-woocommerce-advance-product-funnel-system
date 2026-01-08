@@ -1,43 +1,301 @@
 /**
  * Admin Styles
  *
- * Styles for admin settings and product pages.
+ * Styles for admin settings, product pages, and participant management.
  *
  * @package Gym_Multi_Participant_Booking
  * @since 1.0.0
  */
 
-/* Settings Page */
-.wrap .gmpb-usage-guide {
+/* ==========================================================================
+   Participants Table in Order Items
+   ========================================================================== */
+
+.gmpb-participants-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 10px;
 	background: #fff;
-	border: 1px solid #ccd0d4;
-	padding: 20px;
-	margin-top: 15px;
-	max-width: 800px;
-	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.gmpb-usage-guide ol {
-	margin-left: 20px;
+.gmpb-participants-table thead {
+	background-color: #f8f9fa;
 }
 
-.gmpb-usage-guide li {
-	margin-bottom: 15px;
-	line-height: 1.6;
-}
-
-.gmpb-usage-guide strong {
-	color: #0073aa;
-}
-
-.gmpb-usage-guide p {
-	margin-top: 20px;
+.gmpb-participants-table th {
 	padding: 10px;
-	background-color: #fff8e5;
-	border-left: 4px solid #ffb900;
+	text-align: left;
+	font-weight: 600;
+	font-size: 12px;
+	text-transform: uppercase;
+	color: #555;
+	border-bottom: 2px solid #dee2e6;
 }
 
-/* Product Settings */
+.gmpb-participants-table td {
+	padding: 12px 10px;
+	border-bottom: 1px solid #e9ecef;
+	font-size: 13px;
+	color: #3c434a;
+}
+
+.gmpb-participants-table tr:last-child td {
+	border-bottom: none;
+}
+
+.gmpb-participants-table tr:hover {
+	background-color: #f8f9fa;
+}
+
+.gmpb-participants-table tbody tr {
+	transition: background-color 0.15s ease;
+}
+
+/* Empty state */
+.gmpb-participants-table tbody tr.no-participants td {
+	text-align: center;
+	color: #787c82;
+	font-style: italic;
+	padding: 20px;
+}
+
+/* ==========================================================================
+   Email Status Indicators
+   ========================================================================== */
+
+.gmpb-email-sent,
+.gmpb-email-not-sent {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 12px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	white-space: nowrap;
+}
+
+.gmpb-email-sent {
+	background-color: #d4edda;
+	color: #155724;
+	border: 1px solid #c3e6cb;
+}
+
+.gmpb-email-sent::before {
+	content: '✓ ';
+	font-weight: 700;
+}
+
+.gmpb-email-not-sent {
+	background-color: #f8d7da;
+	color: #721c24;
+	border: 1px solid #f5c6cb;
+}
+
+.gmpb-email-not-sent::before {
+	content: '✗ ';
+	font-weight: 700;
+}
+
+/* Email pending status */
+.gmpb-email-pending {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 12px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	white-space: nowrap;
+	background-color: #fff3cd;
+	color: #856404;
+	border: 1px solid #ffeaa7;
+}
+
+.gmpb-email-pending::before {
+	content: '⏱ ';
+}
+
+/* ==========================================================================
+   Resend Button
+   ========================================================================== */
+
+.gmpb-resend-email {
+	padding: 6px 12px;
+	font-size: 12px;
+	line-height: 1.5;
+	border-radius: 3px;
+	background-color: #0073aa;
+	color: #fff;
+	border: 1px solid #0073aa;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-weight: 500;
+	display: inline-block;
+	text-decoration: none;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.gmpb-resend-email:hover,
+.gmpb-resend-email:focus {
+	background-color: #005177;
+	border-color: #005177;
+	color: #fff;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.gmpb-resend-email:active {
+	transform: translateY(1px);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.gmpb-resend-email:disabled {
+	background-color: #ccc;
+	border-color: #ccc;
+	cursor: not-allowed;
+	opacity: 0.6;
+	box-shadow: none;
+}
+
+.gmpb-resend-email:disabled:hover {
+	background-color: #ccc;
+	border-color: #ccc;
+	transform: none;
+}
+
+/* Loading state */
+.gmpb-resend-email.gmpb-loading {
+	position: relative;
+	color: transparent;
+	pointer-events: none;
+}
+
+.gmpb-resend-email.gmpb-loading::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 12px;
+	height: 12px;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-top-color: #fff;
+	border-radius: 50%;
+	animation: gmpb-spin 0.6s linear infinite;
+}
+
+/* Success state */
+.gmpb-resend-email.gmpb-success {
+	background-color: #46b450;
+	border-color: #46b450;
+}
+
+.gmpb-resend-email.gmpb-success:hover {
+	background-color: #3ea643;
+	border-color: #3ea643;
+}
+
+/* Error state */
+.gmpb-resend-email.gmpb-error {
+	background-color: #dc3232;
+	border-color: #dc3232;
+}
+
+.gmpb-resend-email.gmpb-error:hover {
+	background-color: #c92c2c;
+	border-color: #c92c2c;
+}
+
+/* ==========================================================================
+   Bulk Actions
+   ========================================================================== */
+
+.gmpb-bulk-actions {
+	margin: 15px 0;
+	padding: 12px;
+	background: #f8f9fa;
+	border: 1px solid #dee2e6;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.gmpb-bulk-actions label {
+	font-weight: 600;
+	margin-right: 5px;
+}
+
+.gmpb-bulk-actions input[type="checkbox"] {
+	margin: 0 5px 0 0;
+	vertical-align: middle;
+}
+
+.gmpb-bulk-actions .button {
+	margin-left: auto;
+}
+
+/* Progress bar for bulk operations */
+.gmpb-progress-container {
+	width: 100%;
+	height: 24px;
+	background-color: #f0f0f1;
+	border-radius: 3px;
+	overflow: hidden;
+	box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+	margin-top: 10px;
+}
+
+.gmpb-progress-bar {
+	height: 100%;
+	background: linear-gradient(90deg, #0073aa 0%, #005177 100%);
+	transition: width 0.3s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+/* ==========================================================================
+   Product Edit Page Checkbox
+   ========================================================================== */
+
+.gmpb-product-setting {
+	padding: 12px;
+	background-color: #f8f9fa;
+	border: 1px solid #dee2e6;
+	border-radius: 4px;
+	margin-bottom: 12px;
+}
+
+.gmpb-product-setting label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 600;
+	cursor: pointer;
+	margin: 0;
+}
+
+.gmpb-product-setting input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	cursor: pointer;
+	margin: 0;
+}
+
+.gmpb-product-setting p.description {
+	margin: 8px 0 0 26px;
+	font-size: 13px;
+	color: #666;
+	line-height: 1.5;
+}
+
+/* Product data tabs */
 #gmpb_participants_data .options_group {
 	padding: 12px;
 }
@@ -48,11 +306,13 @@
 
 #gmpb_participants_data .form-field label {
 	font-weight: 600;
+	color: #1d2327;
 }
 
 #gmpb_participants_data .description {
-	color: #666;
+	color: #646970;
 	font-style: italic;
+	margin-top: 5px;
 }
 
 /* Product List Column */
@@ -65,15 +325,232 @@
 	font-size: 20px;
 	width: 20px;
 	height: 20px;
+	color: #46b450;
+}
+
+.column-gmpb_participants .dashicons-no {
+	color: #dcdcde;
 }
 
 .column-gmpb_participants small {
 	display: inline-block;
 	color: #666;
 	font-size: 11px;
+	margin-top: 2px;
 }
 
-/* Admin Notices */
+/* ==========================================================================
+   Settings Page
+   ========================================================================== */
+
+.gmpb-settings-wrap {
+	max-width: 1200px;
+	margin: 20px 0;
+}
+
+.gmpb-settings-main {
+	float: left;
+	width: calc(100% - 330px);
+}
+
+.gmpb-settings-sidebar {
+	float: right;
+	width: 300px;
+	margin-left: 30px;
+}
+
+/* Help box */
+.gmpb-help-box {
+	background: #fff;
+	border: 1px solid #ccd0d4;
+	border-radius: 4px;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.gmpb-help-box h3 {
+	margin-top: 0;
+	margin-bottom: 12px;
+	font-size: 16px;
+	color: #1d2327;
+	border-bottom: 1px solid #dcdcde;
+	padding-bottom: 8px;
+}
+
+.gmpb-help-box ul {
+	margin: 0;
+	padding-left: 20px;
+}
+
+.gmpb-help-box ul li {
+	margin-bottom: 8px;
+	line-height: 1.5;
+	color: #3c434a;
+}
+
+.gmpb-help-box ul li strong {
+	color: #0073aa;
+}
+
+.gmpb-help-box .button {
+	margin-top: 12px;
+	width: 100%;
+	text-align: center;
+}
+
+/* Info box */
+.gmpb-info-box {
+	background: #fff;
+	border: 1px solid #ccd0d4;
+	border-radius: 4px;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.gmpb-info-box h3 {
+	margin-top: 0;
+	margin-bottom: 12px;
+	font-size: 16px;
+	color: #1d2327;
+	border-bottom: 1px solid #dcdcde;
+	padding-bottom: 8px;
+}
+
+.gmpb-info-box p {
+	margin: 8px 0;
+	font-size: 14px;
+	color: #3c434a;
+	line-height: 1.6;
+}
+
+.gmpb-info-box strong {
+	display: block;
+	margin-bottom: 4px;
+	color: #1d2327;
+}
+
+.gmpb-info-box code {
+	background: #f6f7f7;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 13px;
+	color: #d63638;
+}
+
+/* Usage guide */
+.gmpb-usage-guide {
+	background: #fff;
+	border: 1px solid #ccd0d4;
+	padding: 20px;
+	margin-top: 15px;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+	border-radius: 4px;
+}
+
+.gmpb-usage-guide h2 {
+	margin-top: 0;
+	margin-bottom: 15px;
+	color: #1d2327;
+}
+
+.gmpb-usage-guide ol {
+	margin-left: 20px;
+}
+
+.gmpb-usage-guide li {
+	margin-bottom: 15px;
+	line-height: 1.6;
+	color: #3c434a;
+}
+
+.gmpb-usage-guide strong {
+	color: #0073aa;
+}
+
+.gmpb-usage-guide p {
+	margin-top: 20px;
+	padding: 10px 15px;
+	background-color: #fff8e5;
+	border-left: 4px solid #ffb900;
+	border-radius: 3px;
+	color: #3c434a;
+}
+
+/* ==========================================================================
+   Notices and Alerts
+   ========================================================================== */
+
+.gmpb-notice {
+	padding: 12px 15px;
+	border-left: 4px solid;
+	background: #fff;
+	margin: 15px 0;
+	border-radius: 3px;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.gmpb-notice.success {
+	border-left-color: #46b450;
+	background-color: #ecf7ed;
+}
+
+.gmpb-notice.error {
+	border-left-color: #dc3232;
+	background-color: #fef7f7;
+}
+
+.gmpb-notice.warning {
+	border-left-color: #ffb900;
+	background-color: #fff8e5;
+}
+
+.gmpb-notice.info {
+	border-left-color: #00a0d2;
+	background-color: #f0f6fc;
+}
+
+.gmpb-notice p {
+	margin: 0.5em 0;
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.gmpb-notice p:first-child {
+	margin-top: 0;
+}
+
+.gmpb-notice p:last-child {
+	margin-bottom: 0;
+}
+
+/* Dismissible notices */
+.gmpb-notice.is-dismissible {
+	padding-right: 38px;
+	position: relative;
+}
+
+.gmpb-notice .notice-dismiss {
+	position: absolute;
+	top: 0;
+	right: 0;
+	padding: 9px;
+	text-decoration: none;
+}
+
+.gmpb-notice .notice-dismiss:before {
+	content: '\f153';
+	font-family: dashicons;
+	font-size: 16px;
+	color: #787c82;
+}
+
+.gmpb-notice .notice-dismiss:hover:before {
+	color: #d63638;
+}
+
+/* WordPress admin notices integration */
 .notice.gmpb-notice {
 	padding: 12px 15px;
 	border-left-width: 4px;
@@ -83,32 +560,209 @@
 	margin: 0.5em 0;
 }
 
-/* Form Fields */
+/* ==========================================================================
+   Form Fields
+   ========================================================================== */
+
 .form-table th {
 	width: 250px;
+	color: #1d2327;
 }
 
 .form-table input[type="text"],
 .form-table input[type="email"],
 .form-table input[type="number"] {
 	padding: 6px 10px;
+	font-size: 14px;
 }
 
 .form-table .description {
 	margin-top: 5px;
 	color: #646970;
 	font-size: 13px;
+	line-height: 1.5;
+}
+
+.form-table textarea {
+	width: 500px;
+	max-width: 100%;
 }
 
 /* Settings Sections */
 .form-table h2 {
 	margin-top: 30px;
 	padding-top: 20px;
-	border-top: 1px solid #ddd;
+	border-top: 1px solid #dcdcde;
+	color: #1d2327;
 }
 
-/* Responsive */
-@media screen and (max-width: 782px) {
+.form-table h2:first-child {
+	margin-top: 0;
+	padding-top: 0;
+	border-top: none;
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+@keyframes gmpb-spin {
+	to {
+		transform: translate(-50%, -50%) rotate(360deg);
+	}
+}
+
+.gmpb-spinner {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	border: 2px solid #f3f3f3;
+	border-top: 2px solid #0073aa;
+	border-radius: 50%;
+	animation: gmpb-spin 0.8s linear infinite;
+	vertical-align: middle;
+}
+
+.gmpb-loading-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(255, 255, 255, 0.8);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+}
+
+.gmpb-loading-overlay .gmpb-spinner {
+	width: 40px;
+	height: 40px;
+	border-width: 4px;
+}
+
+/* ==========================================================================
+   CSV Export Button
+   ========================================================================== */
+
+.gmpb-export-csv {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 12px;
+	font-size: 12px;
+	line-height: 1.5;
+	border-radius: 3px;
+	background-color: #2ea44f;
+	color: #fff;
+	border: 1px solid #2ea44f;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-weight: 500;
+	text-decoration: none;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.gmpb-export-csv:hover,
+.gmpb-export-csv:focus {
+	background-color: #2c974b;
+	border-color: #2c974b;
+	color: #fff;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.gmpb-export-csv::before {
+	content: '\f346';
+	font-family: dashicons;
+	font-size: 16px;
+}
+
+/* ==========================================================================
+   Responsive Admin
+   ========================================================================== */
+
+@media (max-width: 960px) {
+	.gmpb-settings-main {
+		float: none;
+		width: 100%;
+	}
+
+	.gmpb-settings-sidebar {
+		float: none;
+		width: 100%;
+		margin-left: 0;
+		margin-top: 30px;
+	}
+
+	.gmpb-bulk-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.gmpb-bulk-actions .button {
+		margin-left: 0;
+		width: 100%;
+	}
+}
+
+@media (max-width: 782px) {
+	/* Tables */
+	.gmpb-participants-table {
+		font-size: 12px;
+		overflow-x: auto;
+		display: block;
+	}
+
+	.gmpb-participants-table thead,
+	.gmpb-participants-table tbody,
+	.gmpb-participants-table tr {
+		display: block;
+	}
+
+	.gmpb-participants-table th,
+	.gmpb-participants-table td {
+		padding: 8px 5px;
+	}
+
+	.gmpb-participants-table thead {
+		display: none;
+	}
+
+	.gmpb-participants-table tr {
+		margin-bottom: 15px;
+		border: 1px solid #dee2e6;
+		border-radius: 4px;
+	}
+
+	.gmpb-participants-table td {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		text-align: right;
+		border-bottom: 1px solid #f0f0f1;
+	}
+
+	.gmpb-participants-table td:last-child {
+		border-bottom: none;
+	}
+
+	.gmpb-participants-table td::before {
+		content: attr(data-label);
+		font-weight: 600;
+		text-align: left;
+		color: #555;
+		flex-shrink: 0;
+	}
+
+	/* Buttons */
+	.gmpb-resend-email,
+	.gmpb-export-csv {
+		font-size: 11px;
+		padding: 4px 8px;
+	}
+
+	/* Form fields */
 	.form-table th {
 		width: auto;
 		padding-bottom: 5px;
@@ -116,7 +770,140 @@
 
 	.form-table input[type="text"],
 	.form-table input[type="email"],
-	.form-table input[type="number"] {
+	.form-table input[type="number"],
+	.form-table textarea {
 		width: 100%;
+	}
+
+	/* Settings boxes */
+	.gmpb-help-box,
+	.gmpb-info-box {
+		padding: 15px;
+	}
+}
+
+@media (max-width: 600px) {
+	.gmpb-email-sent,
+	.gmpb-email-not-sent,
+	.gmpb-email-pending {
+		font-size: 10px;
+		padding: 3px 8px;
+	}
+
+	.gmpb-product-setting {
+		padding: 10px;
+	}
+
+	.gmpb-notice {
+		padding: 10px;
+		font-size: 12px;
+	}
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+	.gmpb-resend-email,
+	.gmpb-export-csv,
+	.gmpb-bulk-actions,
+	.gmpb-settings-sidebar {
+		display: none;
+	}
+
+	.gmpb-participants-table {
+		border: 1px solid #000;
+	}
+
+	.gmpb-participants-table th,
+	.gmpb-participants-table td {
+		border: 1px solid #000;
+	}
+}
+
+/* ==========================================================================
+   Accessibility Enhancements
+   ========================================================================== */
+
+/* Focus visible */
+.gmpb-resend-email:focus-visible,
+.gmpb-export-csv:focus-visible {
+	outline: 2px solid #0073aa;
+	outline-offset: 2px;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+	.gmpb-participants-table {
+		border: 2px solid #000;
+	}
+
+	.gmpb-participants-table th,
+	.gmpb-participants-table td {
+		border: 1px solid #000;
+	}
+
+	.gmpb-email-sent,
+	.gmpb-email-not-sent,
+	.gmpb-email-pending {
+		border-width: 2px;
+	}
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+	.gmpb-resend-email,
+	.gmpb-participants-table tr,
+	.gmpb-progress-bar,
+	.gmpb-spinner {
+		animation: none;
+		transition: none;
+	}
+}
+
+/* ==========================================================================
+   Dark Mode Support (WordPress 5.7+)
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+	.gmpb-participants-table {
+		background: #1d2327;
+	}
+
+	.gmpb-participants-table thead {
+		background-color: #2c3338;
+	}
+
+	.gmpb-participants-table th {
+		color: #c3c4c7;
+	}
+
+	.gmpb-participants-table td {
+		color: #c3c4c7;
+		border-bottom-color: #3c434a;
+	}
+
+	.gmpb-participants-table tr:hover {
+		background-color: #2c3338;
+	}
+
+	.gmpb-help-box,
+	.gmpb-info-box,
+	.gmpb-usage-guide {
+		background: #1d2327;
+		border-color: #3c434a;
+	}
+
+	.gmpb-help-box h3,
+	.gmpb-info-box h3 {
+		color: #f0f0f1;
+		border-bottom-color: #3c434a;
+	}
+
+	.gmpb-help-box ul li,
+	.gmpb-info-box p,
+	.gmpb-usage-guide li {
+		color: #c3c4c7;
 	}
 }
