@@ -76,6 +76,11 @@ class GMPB_Participant_Manager {
 	public function add_participant_fields_to_product() {
 		global $product;
 
+		// Check license validity first.
+		if ( GMPB_License_Manager::is_license_expired() ) {
+			return; // Don't show participant form if license expired.
+		}
+
 		// Check if product exists.
 		if ( ! $product ) {
 			return;
@@ -119,6 +124,11 @@ class GMPB_Participant_Manager {
 	 * @return bool Validation status.
 	 */
 	public function validate_participant_data( $passed, $product_id, $quantity, $variation_id = 0 ) {
+		// Check license validity first.
+		if ( GMPB_License_Manager::is_license_expired() ) {
+			return $passed; // Don't validate if license expired.
+		}
+
 		// IMPORTANT CHECK: Only validate if participant booking is enabled.
 		if ( ! GMPB_Product_Settings::is_participant_booking_enabled( $product_id ) ) {
 			return $passed;
@@ -239,6 +249,11 @@ class GMPB_Participant_Manager {
 	 * @return array Modified cart item data.
 	 */
 	public function save_participant_data_to_cart( $cart_item_data, $product_id, $variation_id ) {
+		// Check license validity first.
+		if ( GMPB_License_Manager::is_license_expired() ) {
+			return $cart_item_data; // Don't save if license expired.
+		}
+
 		// IMPORTANT CHECK: Only save if participant booking is enabled.
 		if ( ! GMPB_Product_Settings::is_participant_booking_enabled( $product_id ) ) {
 			return $cart_item_data;

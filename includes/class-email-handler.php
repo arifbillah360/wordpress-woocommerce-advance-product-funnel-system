@@ -64,6 +64,11 @@ class GMPB_Email_Handler {
 	 * @return void
 	 */
 	public function send_participant_emails( $order_id ) {
+		// Check license validity first.
+		if ( GMPB_License_Manager::is_license_expired() ) {
+			return; // Don't send emails if license expired.
+		}
+
 		// Get order object.
 		$order = wc_get_order( $order_id );
 
@@ -387,6 +392,14 @@ class GMPB_Email_Handler {
 	 * @return array Array with 'success' boolean and 'message' string.
 	 */
 	public function resend_participant_email( $order_id, $item_id, $participant_index ) {
+		// Check license validity first.
+		if ( GMPB_License_Manager::is_license_expired() ) {
+			return array(
+				'success' => false,
+				'message' => __( 'License has expired.', 'gym-multi-participant-booking' ),
+			);
+		}
+
 		// Get order.
 		$order = wc_get_order( $order_id );
 		if ( ! $order ) {

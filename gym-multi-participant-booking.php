@@ -106,6 +106,14 @@ class Gym_Multi_Participant_Booking {
 	public $product_settings;
 
 	/**
+	 * License Manager instance.
+	 *
+	 * @since 1.0.0
+	 * @var GMPB_License_Manager
+	 */
+	public $license_manager;
+
+	/**
 	 * Get single instance of the class.
 	 *
 	 * @since 1.0.0
@@ -143,6 +151,15 @@ class Gym_Multi_Participant_Booking {
 
 		// Include required files.
 		$this->includes();
+
+		// Check license validity.
+		if ( GMPB_License_Manager::is_license_expired() ) {
+			add_action( 'admin_notices', array( 'GMPB_License_Manager', 'maybe_show_expiration_notice' ) );
+			return; // Stop plugin initialization if license expired.
+		}
+
+		// Show license expiration warning if expiring soon.
+		add_action( 'admin_notices', array( 'GMPB_License_Manager', 'maybe_show_expiration_notice' ) );
 
 		// Initialize hooks.
 		$this->init_hooks();
@@ -204,11 +221,17 @@ class Gym_Multi_Participant_Booking {
 	 * @return void
 	 */
 	private function includes() {
+		// Include license manager first.
+		require_once GMPB_PLUGIN_DIR . 'includes/class-license-manager.php';
+
 		// Include class files.
 		require_once GMPB_PLUGIN_DIR . 'includes/class-participant-manager.php';
 		require_once GMPB_PLUGIN_DIR . 'includes/class-email-handler.php';
 		require_once GMPB_PLUGIN_DIR . 'includes/class-admin-settings.php';
 		require_once GMPB_PLUGIN_DIR . 'includes/class-product-settings.php';
+
+		// Initialize license manager.
+		$this->license_manager = GMPB_License_Manager::instance();
 
 		// Initialize component classes.
 		$this->participant_manager = new GMPB_Participant_Manager();
